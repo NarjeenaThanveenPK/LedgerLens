@@ -1,10 +1,10 @@
-Company,Year,Total Revenue,Net Income,Total Assets,Total Liabilities,Operating Cash Flow
-Microsoft,2025,"281,724","101,832","619,003","275,524","136,162"
-Microsoft,2024,"245,122","88,136","512,163","243,686","118,548"
-Microsoft,2023,"211,915","72,361","411,976","205,753","87,582"
-Apple,2025,"416,161","112,010","359,241","285,508","111,482"
-Apple,2024,"391,035","93,736","364,980","308,030","118,254"
-Apple,2023,"383,285","96,995","352,583","290,437","110,543"
-Tesla,2025,"94,827","3,855","137,806","54,941","14,747"
-Tesla,2024,"97,690","7,153","122,070","48,390","14,923"
-Tesla,2023,"96,773","14,974","106,618","43,009","13,256"
+Company,Ticker,Fiscal Year,Fiscal Year End,Total Revenue,Net Income,Total Assets,Total Liabilities,Operating Cash Flow,Source URL
+Microsoft,MSFT,2025,2025-06-30,"281,724","101,832","619,003","275,524","136,162",https://www.microsoft.com/investor/reports/ar25/index.html
+Microsoft,MSFT,2024,2024-06-30,"245,122","88,136","512,163","243,686","118,548",https://www.microsoft.com/investor/reports/ar25/index.html
+Microsoft,MSFT,2023,2023-06-30,"211,915","72,361","411,976","205,753","87,582",https://www.microsoft.com/investor/reports/ar25/index.html
+Apple,AAPL,2025,2025-09-27,"416,161","112,010","359,241","285,508","111,482",https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm
+Apple,AAPL,2024,2024-09-28,"391,035","93,736","364,980","308,030","118,254",https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm
+Apple,AAPL,2023,2023-09-30,"383,285","96,995","352,583","290,437","110,543",https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm
+Tesla,TSLA,2025,2025-12-31,"94,827","3,855","137,806","54,941","14,747",https://stocklight.com/stocks/us/nasdaq-tsla/tesla/annual-reports/nasdaq-tsla-2026-10K-26574326.pdf
+Tesla,TSLA,2024,2024-12-31,"97,690","7,153","122,070","48,390","14,923",https://stocklight.com/stocks/us/nasdaq-tsla/tesla/annual-reports/nasdaq-tsla-2026-10K-26574326.pdf
+Tesla,TSLA,2023,2023-12-31,"96,773","14,974","106,618","43,009","13,256",https://stocklight.com/stocks/us/nasdaq-tsla/tesla/annual-reports/nasdaq-tsla-2026-10K-26574326.pdf

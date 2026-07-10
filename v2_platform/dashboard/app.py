@@ -228,9 +228,21 @@ section[data-testid="stSidebarContent"] {
 }
 .stTextInput > div > div > input {
     background-color: #1E293B !important;
-    border-color: #334155 !important;
+    border: 1.5px solid #334155 !important;
     color: #F1F5F9 !important;
-    border-radius: 8px !important;
+    border-radius: 24px !important;
+    padding: 14px 20px !important;
+    font-size: 15px !important;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.3) !important;
+    transition: all 0.2s !important;
+}
+.stTextInput > div > div > input:focus {
+    border-color: #2563EB !important;
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.15) !important;
+    outline: none !important;
+}
+.stTextInput > div {
+    border: none !important;
 }
 div[data-testid="stHorizontalBlock"] { gap: 12px; }
 </style>

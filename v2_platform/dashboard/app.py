@@ -1,3 +1,5 @@
+import os
+os.environ["STREAMLIT_SERVER_FILE_WATCHER_TYPE"] = "none"
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -6,10 +8,14 @@ import sys
 import os
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from analytics.financial_engine import (
     load_data, get_company_data, get_latest,
     compute_cagr, get_top_performer, compare_two, get_all_metrics_summary
 )
+from rag.retriever import retrieve_context
+from llm.gemini_handler import generate_answer, compute_confidence
+from utils.response_builder import parse_structured_response, format_sources_html
 
 st.set_page_config(
     page_title="LedgerLens",
@@ -39,7 +45,6 @@ section[data-testid="stSidebarContent"] {
 #MainMenu, footer, header {visibility: hidden;}
 [data-testid="stToolbar"] {display: none;}
 
-/* Ghost nav buttons */
 [data-testid="stSidebar"] .stButton > button {
     background: transparent !important;
     color: #64748B !important;
@@ -63,7 +68,6 @@ section[data-testid="stSidebarContent"] {
     outline: none !important;
 }
 
-/* Main content buttons stay blue */
 [data-testid="stMain"] .stButton > button {
     background: #2563EB !important;
     color: white !important;
@@ -84,19 +88,6 @@ section[data-testid="stSidebarContent"] {
     border-radius: 12px;
     padding: 20px;
     margin-bottom: 16px;
-}
-.clickable-card {
-    background: #1E293B;
-    border: 1px solid #334155;
-    border-radius: 12px;
-    padding: 24px;
-    cursor: pointer;
-    transition: all 0.2s;
-    height: 100%;
-}
-.clickable-card:hover {
-    border-color: #2563EB;
-    background: #1a2744;
 }
 .metric-card {
     background: #1E293B;
@@ -199,7 +190,7 @@ section[data-testid="stSidebarContent"] {
     margin: 12px 0;
     color: #F1F5F9;
     font-size: 14px;
-    max-width: 85%;
+    max-width: 90%;
 }
 .chat-label {
     font-size: 10px;
@@ -253,6 +244,8 @@ if "page" not in st.session_state:
     st.session_state.page = "Home"
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
+if "suggested_questions" not in st.session_state:
+    st.session_state.suggested_questions = []
 
 # ── Data ──
 df = load_data()
@@ -328,13 +321,12 @@ if page == "Home":
     </div>
     """, unsafe_allow_html=True)
 
-    # Stats row
     st.markdown("<div style='font-size:11px;color:#334155;text-align:center;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:16px;'>Platform Coverage</div>", unsafe_allow_html=True)
     s1, s2, s3, s4 = st.columns(4)
     for col, num, label in zip(
         [s1, s2, s3, s4],
-        ["3", "3", "9", "15+"],
-        ["Companies", "Fiscal Years", "SEC Reports", "Financial Metrics"]
+        ["3", "3", "9", "4,765"],
+        ["Companies", "Fiscal Years", "SEC Reports", "Vector Chunks"]
     ):
         col.markdown(f"""
         <div class='stat-card'>
@@ -371,13 +363,13 @@ if page == "Home":
 # ────────────────────────────────────────
 elif page == "AI Assistant":
     st.markdown("<div class='page-title'>AI Assistant</div>", unsafe_allow_html=True)
-    st.markdown("<div class='page-subtitle'>Ask questions about Apple, Microsoft, and Tesla SEC 10-K filings</div>", unsafe_allow_html=True)
+    st.markdown("<div class='page-subtitle'>Ask questions about Apple, Microsoft, and Tesla SEC 10-K filings — answers grounded in real documents</div>", unsafe_allow_html=True)
 
     if not st.session_state.chat_history:
         st.markdown("""
         <div class='card' style='text-align:center;padding:48px 40px;'>
             <div style='font-size:15px;color:#475569;font-weight:600;margin-bottom:12px;'>Start a conversation</div>
-            <div style='font-size:13px;color:#334155;'>Ask about revenue, profit margins, risks, AI investments, or compare companies.</div>
+            <div style='font-size:13px;color:#334155;'>Ask about revenue, profit margins, risks, AI investments, or compare companies.<br>Every answer is grounded in actual SEC 10-K filings with citations.</div>
         </div>
         """, unsafe_allow_html=True)
     else:
@@ -392,31 +384,115 @@ elif page == "AI Assistant":
                 </div>
                 """, unsafe_allow_html=True)
             else:
-                st.markdown(f"""
-                <div class='chat-message-ai'>
-                    <div class='chat-label chat-label-ai'>LedgerLens</div>
-                    {msg['content']}
-                </div>
-                """, unsafe_allow_html=True)
+                st.markdown(f"<div class='chat-message-ai'><div class='chat-label chat-label-ai'>LedgerLens</div></div>", unsafe_allow_html=True)
+                st.markdown(msg['content'], unsafe_allow_html=True)
 
     st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
+
     col1, col2 = st.columns([5, 1])
     with col1:
-        user_input = st.text_input("", placeholder="Ask about financials, risks, strategy, or comparisons...", label_visibility="collapsed", key="chat_input")
+        user_input = st.text_input(
+            "",
+            placeholder="Ask about financials, risks, strategy, or comparisons...",
+            label_visibility="collapsed",
+            key="chat_input"
+        )
     with col2:
         send = st.button("Send", use_container_width=True)
 
     if send and user_input:
-        st.session_state.chat_history.append({"role": "user", "content": user_input})
+        st.session_state.chat_history.append({
+            "role": "user",
+            "content": user_input
+        })
+
+        thinking_placeholder = st.empty()
+        thinking_placeholder.markdown("""
+        <div class='card' style='padding:16px 20px;'>
+            <div style='font-size:13px;color:#64748B;line-height:2.2;'>
+                🔍 Searching SEC 10-K reports...<br>
+                📊 Calculating financial metrics...<br>
+                🤖 Generating grounded answer...
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        context, sources = retrieve_context(user_input)
+        result = generate_answer(user_input, context, sources)
+        confidence = compute_confidence(sources)
+        sections = parse_structured_response(result["answer"])
+        sources_html = format_sources_html(sources)
+
+        thinking_placeholder.empty()
+
+        response_html = f"""
+        <div style='margin-bottom:12px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;'>
+            <span style='font-size:12px;color:#22C55E;font-weight:600;'>Confidence: {confidence}%</span>
+            <span style='font-size:12px;color:#475569;'>⏱ {result['latency']}s</span>
+            <span style='font-size:12px;color:#475569;'>📄 {len(sources)} sources</span>
+        </div>
+        """
+
+        if sections["summary"]:
+            response_html += f"""
+            <div style='margin-bottom:14px;'>
+                <div style='font-size:10px;color:#64748B;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;'>Summary</div>
+                <div style='font-size:14px;color:#F1F5F9;line-height:1.7;'>{sections['summary']}</div>
+            </div>"""
+
+        if sections["metrics"]:
+            response_html += f"""
+            <div style='margin-bottom:14px;background:#0F172A;border-radius:8px;padding:14px;'>
+                <div style='font-size:10px;color:#64748B;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;'>Key Metrics</div>
+                <div style='font-size:13px;color:#CBD5E1;line-height:1.9;'>{sections['metrics']}</div>
+            </div>"""
+
+        if sections["insight"]:
+            response_html += f"""
+            <div style='margin-bottom:14px;'>
+                <div style='font-size:10px;color:#64748B;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;'>Insight</div>
+                <div style='font-size:13px;color:#CBD5E1;line-height:1.7;'>{sections['insight']}</div>
+            </div>"""
+
+        if sections["limitations"]:
+            response_html += f"""
+            <div style='margin-bottom:14px;background:#1a1f2e;border-radius:6px;padding:10px 14px;border-left:3px solid #475569;'>
+                <div style='font-size:10px;color:#475569;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;'>Limitations</div>
+                <div style='font-size:12px;color:#475569;line-height:1.6;'>{sections['limitations']}</div>
+            </div>"""
+
+        response_html += sources_html
+
         st.session_state.chat_history.append({
             "role": "assistant",
-            "content": "Gemini integration coming in Phase 5. RAG pipeline will power responses with citations from actual 10-K filings."
+            "content": response_html
         })
+
+        # Suggested follow-up questions
+        company_mentioned = sources[0]["company"] if sources else "Apple"
+        st.session_state.suggested_questions = [
+            f"What risks did {company_mentioned} mention?",
+            f"Compare {company_mentioned} with Microsoft",
+            f"Show {company_mentioned} revenue trend",
+            "Which company has the strongest cash flow?"
+        ]
+
         st.rerun()
+
+    # Suggested questions
+    if st.session_state.suggested_questions:
+        st.markdown("<div style='font-size:11px;color:#334155;margin-top:12px;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.08em;'>Suggested follow-ups</div>", unsafe_allow_html=True)
+        cols = st.columns(len(st.session_state.suggested_questions))
+        for col, q in zip(cols, st.session_state.suggested_questions):
+            if col.button(q, key=f"sugg_{q}"):
+                st.session_state.chat_history.append({"role": "user", "content": q})
+                st.session_state.suggested_questions = []
+                st.rerun()
 
     if st.session_state.chat_history:
         if st.button("Clear conversation"):
             st.session_state.chat_history = []
+            st.session_state.suggested_questions = []
             st.rerun()
 
 # ────────────────────────────────────────
@@ -459,7 +535,45 @@ elif page == "Dashboard":
                 {delta_html}
             </div>
             """, unsafe_allow_html=True)
-        st.markdown("<div style='height:20px'></div>", unsafe_allow_html=True)
+
+        # Financial Health Score
+        from analytics.health_score import compute_health_score
+        score = compute_health_score(df, selected_company)
+        grade_color = {
+            "Excellent": "#22C55E", "Strong": "#3B82F6",
+            "Good": "#F59E0B", "Fair": "#F97316", "Weak": "#EF4444"
+        }.get(score["grade"], "#94A3B8")
+
+        st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class='card' style='display:flex;align-items:center;gap:32px;padding:20px 28px;'>
+            <div>
+                <div class='metric-label'>Financial Health Score</div>
+                <div style='font-size:36px;font-weight:700;color:{grade_color};'>{score['total']}<span style='font-size:18px;color:#475569;'>/100</span></div>
+                <div style='font-size:13px;color:{grade_color};font-weight:600;'>{score['grade']}</div>
+            </div>
+            <div style='display:flex;gap:24px;'>
+                <div style='text-align:center;'>
+                    <div style='font-size:20px;font-weight:700;color:#F1F5F9;'>{score['profitability']}<span style='font-size:12px;color:#475569;'>/25</span></div>
+                    <div style='font-size:11px;color:#64748B;text-transform:uppercase;letter-spacing:0.06em;margin-top:4px;'>Profitability</div>
+                </div>
+                <div style='text-align:center;'>
+                    <div style='font-size:20px;font-weight:700;color:#F1F5F9;'>{score['growth']}<span style='font-size:12px;color:#475569;'>/25</span></div>
+                    <div style='font-size:11px;color:#64748B;text-transform:uppercase;letter-spacing:0.06em;margin-top:4px;'>Growth</div>
+                </div>
+                <div style='text-align:center;'>
+                    <div style='font-size:20px;font-weight:700;color:#F1F5F9;'>{score['safety']}<span style='font-size:12px;color:#475569;'>/25</span></div>
+                    <div style='font-size:11px;color:#64748B;text-transform:uppercase;letter-spacing:0.06em;margin-top:4px;'>Safety</div>
+                </div>
+                <div style='text-align:center;'>
+                    <div style='font-size:20px;font-weight:700;color:#F1F5F9;'>{score['cash']}<span style='font-size:12px;color:#475569;'>/25</span></div>
+                    <div style='font-size:11px;color:#64748B;text-transform:uppercase;letter-spacing:0.06em;margin-top:4px;'>Cash</div>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
     st.markdown("<div class='section-title'>Revenue Trend</div>", unsafe_allow_html=True)
     fig1 = px.bar(view_df, x="Fiscal Year", y="Total Revenue",
@@ -627,20 +741,33 @@ elif page == "Reports":
 
             cagr = summary["Revenue CAGR (%)"]
             direction = "grew" if cagr > 0 else "declined"
+
+            # AI-generated summary using RAG
+            ai_query = f"Summarize {selected}'s financial performance and key business highlights from 2023 to 2025"
+            context, sources = retrieve_context(ai_query)
+            result = generate_answer(ai_query, context, sources)
+            sections = parse_structured_response(result["answer"])
+            sources_html = format_sources_html(sources)
+
             st.markdown(f"""
             <div class='card'>
                 <div style='font-size:13px;font-weight:600;color:#F1F5F9;margin-bottom:10px;'>Financial Summary</div>
                 <div style='font-size:13px;color:#94A3B8;line-height:1.8;'>
                     {selected}'s revenue {direction} at a CAGR of {abs(cagr):.1f}% between FY2023 and FY2025.
-                    The latest profit margin stands at {summary['Profit Margin (%)']:.1f}%, with a debt-to-assets ratio of {summary['Debt to Assets']:.2f}.
-                    Operating cash flow of ${summary['Operating Cash Flow (M)']:,.0f}M reflects the company's ability to generate cash from core operations.
+                    Profit margin stands at {summary['Profit Margin (%)']:.1f}% with a debt-to-assets ratio of {summary['Debt to Assets']:.2f}.
                 </div>
             </div>
-            <div class='card' style='border-left:3px solid #2563EB;margin-top:0;'>
-                <div style='font-size:11px;color:#2563EB;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;'>Coming in Phase 5</div>
-                <div style='font-size:13px;color:#64748B;'>AI-generated insights and PDF export will be available after Gemini integration.</div>
-            </div>
             """, unsafe_allow_html=True)
+
+            if sections["insight"]:
+                st.markdown(f"""
+                <div class='card' style='border-left:3px solid #22C55E;'>
+                    <div style='font-size:11px;color:#22C55E;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;'>AI Insight from 10-K</div>
+                    <div style='font-size:13px;color:#94A3B8;line-height:1.8;'>{sections['insight']}</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+            st.markdown(sources_html, unsafe_allow_html=True)
 
 # ────────────────────────────────────────
 # ABOUT
@@ -664,7 +791,7 @@ elif page == "About":
     s1, s2, s3, s4, s5 = st.columns(5)
     for col, num, label in zip(
         [s1, s2, s3, s4, s5],
-        ["3", "9", "15+", "2,000+", "5"],
+        ["3", "9", "15+", "4,765", "5"],
         ["Companies", "SEC Reports", "Financial Metrics", "Vector Chunks", "Platform Modules"]
     ):
         col.markdown(f"<div class='stat-card'><div class='stat-number'>{num}</div><div class='stat-label'>{label}</div></div>", unsafe_allow_html=True)
@@ -678,7 +805,7 @@ elif page == "About":
         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style='color:#2563EB;'>Financial Engine</span>&nbsp;&nbsp;&nbsp;&nbsp;<span style='color:#22C55E;'>RAG Pipeline</span><br>
         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Pandas · Ratios&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;LangChain · FAISS<br>
         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓<br>
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style='color:#F59E0B;'>Gemini LLM</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style='color:#F59E0B;'>Groq LLM (Llama 3.3)</span><br>
         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓<br>
         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Summary · Metrics · Charts · Sources
     </div>
@@ -688,11 +815,11 @@ elif page == "About":
     tech = [
         ("Python + Pandas", "Data processing and financial ratio computation"),
         ("LangChain", "RAG pipeline orchestration"),
-        ("FAISS", "Vector database for semantic search"),
-        ("HuggingFace", "Sentence embeddings"),
-        ("Google Gemini", "LLM for answer generation"),
-        ("PyMuPDF", "PDF text extraction from SEC filings"),
-        ("Plotly", "Interactive financial charts"),
+        ("FAISS", "Vector database for semantic search over 10-K documents"),
+        ("HuggingFace Embeddings", "Sentence embeddings — all-MiniLM-L6-v2"),
+        ("Groq + Llama 3.3", "LLM for grounded answer generation"),
+        ("PyMuPDF", "PDF text extraction from SEC 10-K filings"),
+        ("Plotly", "Interactive financial charts and visualizations"),
         ("Streamlit", "Web platform framework"),
     ]
     c1, c2 = st.columns(2)

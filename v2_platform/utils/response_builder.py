@@ -1,4 +1,11 @@
+import re
+
 def parse_structured_response(raw_answer):
+    # Remove any HTML that leaked in
+    raw_answer = re.sub(r'<[^>]+>', '', raw_answer)
+    # Remove bracketed format hints
+    raw_answer = re.sub(r'\[.*?\]', '', raw_answer)
+    
     sections = {
         "summary": "",
         "metrics": "",
@@ -30,9 +37,18 @@ def parse_structured_response(raw_answer):
             current = "sources"
         elif line_lower.startswith("limitations:"):
             current = "limitations"
+            remainder = line_stripped[12:].strip()
+            if remainder:
+                sections[current] += remainder + "\n"
         elif current and line_stripped:
             sections[current] += line + "\n"
     
+    # Truncate limitations to first sentence only
+    if sections["limitations"]:
+        first_sentence = sections["limitations"].split(".")[0].strip()
+        sections["limitations"] = first_sentence + "." if first_sentence else ""
+    
+    # Fallback
     if not any(sections.values()):
         sections["summary"] = raw_answer
     

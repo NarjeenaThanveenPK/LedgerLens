@@ -384,7 +384,7 @@ elif page == "AI Assistant":
                 </div>
                 """, unsafe_allow_html=True)
             else:
-                st.markdown(f"<div class='chat-message-ai'><div class='chat-label chat-label-ai'>LedgerLens</div></div>", unsafe_allow_html=True)
+                st.markdown("<div class='chat-message-ai'><div class='chat-label chat-label-ai'>LedgerLens</div></div>", unsafe_allow_html=True)
                 st.markdown(msg['content'], unsafe_allow_html=True)
 
     st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)

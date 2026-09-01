@@ -11,7 +11,7 @@ if not api_key:
     raise ValueError("GROQ_API_KEY not found in .env file")
 
 client = Groq(api_key=api_key)
-MODEL = "llama-3.3-70b-versatile"
+MODEL = "qwen/qwen3.6-27b"
 
 
 def generate_answer(query, context, sources):

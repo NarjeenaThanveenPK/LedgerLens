@@ -1,11 +1,17 @@
 import os
 os.environ["STREAMLIT_SERVER_FILE_WATCHER_TYPE"] = "none"
+import re
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import sys
 import os
+
+def clean_section(text):
+    text = re.sub(r'<[^>]+>', '', str(text))
+    text = re.sub(r'\[.*?\]', '', text)
+    return text.strip()
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -384,8 +390,38 @@ elif page == "AI Assistant":
                 </div>
                 """, unsafe_allow_html=True)
             else:
-                st.markdown("<div class='chat-message-ai'><div class='chat-label chat-label-ai'>LedgerLens</div></div>", unsafe_allow_html=True)
-                st.markdown(msg['content'], unsafe_allow_html=True)
+                sections = msg["content"]
+                confidence = msg.get("confidence", 0)
+                latency = msg.get("latency", 0)
+                source_count = msg.get("source_count", 0)
+                sources_html = msg.get("sources_html", "")
+
+                st.markdown(f"""
+                <div style='margin-bottom:8px;display:flex;gap:16px;align-items:center;'>
+                    <span style='font-size:12px;color:#22C55E;font-weight:600;'>Confidence: {confidence}%</span>
+                    <span style='font-size:12px;color:#475569;'>⏱ {latency}s</span>
+                    <span style='font-size:12px;color:#475569;'>📄 {source_count} sources</span>
+                </div>
+                """, unsafe_allow_html=True)
+
+                if sections.get("summary"):
+                    st.markdown("<div style='font-size:10px;color:#64748B;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;'>Summary</div>", unsafe_allow_html=True)
+                    st.write(clean_section(sections["summary"]))
+
+                if sections.get("metrics"):
+                    st.markdown("<div style='font-size:10px;color:#64748B;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;margin-top:12px;margin-bottom:4px;'>Key Metrics</div>", unsafe_allow_html=True)
+                    st.write(clean_section(sections["metrics"]))
+
+                if sections.get("insight"):
+                    st.markdown("<div style='font-size:10px;color:#64748B;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;margin-top:12px;margin-bottom:4px;'>Insight</div>", unsafe_allow_html=True)
+                    st.write(clean_section(sections["insight"]))
+
+                if sections.get("limitations"):
+                    st.markdown("<div style='font-size:10px;color:#64748B;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;margin-top:12px;margin-bottom:4px;'>Limitations</div>", unsafe_allow_html=True)
+                    st.write(clean_section(sections["limitations"]))
+
+                st.markdown(sources_html, unsafe_allow_html=True)
+                st.divider()
 
     st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
 
@@ -406,69 +442,22 @@ elif page == "AI Assistant":
             "content": user_input
         })
 
-        thinking_placeholder = st.empty()
-        thinking_placeholder.markdown("""
-        <div class='card' style='padding:16px 20px;'>
-            <div style='font-size:13px;color:#64748B;line-height:2.2;'>
-                🔍 Searching SEC 10-K reports...<br>
-                📊 Calculating financial metrics...<br>
-                🤖 Generating grounded answer...
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        context, sources = retrieve_context(user_input)
-        result = generate_answer(user_input, context, sources)
-        confidence = compute_confidence(sources)
-        sections = parse_structured_response(result["answer"])
-        sources_html = format_sources_html(sources)
-
-        thinking_placeholder.empty()
-
-        response_html = f"""
-        <div style='margin-bottom:12px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;'>
-            <span style='font-size:12px;color:#22C55E;font-weight:600;'>Confidence: {confidence}%</span>
-            <span style='font-size:12px;color:#475569;'>⏱ {result['latency']}s</span>
-            <span style='font-size:12px;color:#475569;'>📄 {len(sources)} sources</span>
-        </div>
-        """
-
-        if sections["summary"]:
-            response_html += f"""
-            <div style='margin-bottom:14px;'>
-                <div style='font-size:10px;color:#64748B;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;'>Summary</div>
-                <div style='font-size:14px;color:#F1F5F9;line-height:1.7;'>{sections['summary']}</div>
-            </div>"""
-
-        if sections["metrics"]:
-            response_html += f"""
-            <div style='margin-bottom:14px;background:#0F172A;border-radius:8px;padding:14px;'>
-                <div style='font-size:10px;color:#64748B;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;'>Key Metrics</div>
-                <div style='font-size:13px;color:#CBD5E1;line-height:1.9;'>{sections['metrics']}</div>
-            </div>"""
-
-        if sections["insight"]:
-            response_html += f"""
-            <div style='margin-bottom:14px;'>
-                <div style='font-size:10px;color:#64748B;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;'>Insight</div>
-                <div style='font-size:13px;color:#CBD5E1;line-height:1.7;'>{sections['insight']}</div>
-            </div>"""
-
-        if sections["limitations"]:
-            response_html += f"""
-            <div style='margin-bottom:14px;background:#1a1f2e;border-radius:6px;padding:10px 14px;border-left:3px solid #475569;'>
-                <div style='font-size:10px;color:#475569;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;'>Limitations</div>
-                <div style='font-size:12px;color:#475569;line-height:1.6;'>{sections['limitations']}</div>
-            </div>"""
-
-        response_html += sources_html
+        with st.spinner("Searching SEC reports and generating answer..."):
+            context, sources = retrieve_context(user_input)
+            result = generate_answer(user_input, context, sources)
+            confidence = compute_confidence(sources)
+            sections = parse_structured_response(result["answer"])
+            sources_html = format_sources_html(sources)
 
         st.session_state.chat_history.append({
             "role": "assistant",
-            "content": response_html
+            "content": sections,
+            "confidence": confidence,
+            "latency": result["latency"],
+            "source_count": len(sources),
+            "sources_html": sources_html
         })
 
-        # Suggested follow-up questions
         company_mentioned = sources[0]["company"] if sources else "Apple"
         st.session_state.suggested_questions = [
             f"What risks did {company_mentioned} mention?",
@@ -763,7 +752,7 @@ elif page == "Reports":
                 st.markdown(f"""
                 <div class='card' style='border-left:3px solid #22C55E;'>
                     <div style='font-size:11px;color:#22C55E;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;'>AI Insight from 10-K</div>
-                    <div style='font-size:13px;color:#94A3B8;line-height:1.8;'>{sections['insight']}</div>
+                    <div style='font-size:13px;color:#94A3B8;line-height:1.8;'>{clean_section(sections['insight'])}</div>
                 </div>
                 """, unsafe_allow_html=True)
 

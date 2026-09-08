@@ -1,12 +1,12 @@
 from rag.embeddings import get_vectorstore
 
 
-def get_retriever(k=5):
+def get_retriever(k=3):
     vs = get_vectorstore()
     return vs.as_retriever(search_kwargs={"k": k})
 
 
-def retrieve_context(query, k=5):
+def retrieve_context(query, k=3):
     retriever = get_retriever(k=k)
     docs = retriever.invoke(query)
     

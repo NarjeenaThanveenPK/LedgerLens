@@ -1,0 +1,13 @@
+streamlit
+plotly
+pandas
+langchain
+langchain-community
+langchain-huggingface
+langchain-text-splitters
+faiss-cpu
+sentence-transformers
+groq
+python-dotenv
+pymupdf
+numpy

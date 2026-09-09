@@ -1,16 +1,17 @@
 # LedgerLens Roadmap
 
-## Version 1 — Rule-Based Assistant 
-BCG simulation prototype. Keyword matching, Pandas analytics.
+## Version 1 — Rule-Based Assistant ✅
+BCG GenAI Job Simulation prototype. Keyword matching, Pandas analytics, predefined financial queries for Apple, Microsoft, Tesla.
 
-## Version 2 — Financial Intelligence Platform 
+## Version 2 — Financial Intelligence Platform
 
-- [x] Phase 0 — Project setup and Version 1 upload
-- [ ] Phase 1 — PDF extraction and data engineering
-- [ ] Phase 2 — Financial engine with ratios and CAGR
-- [ ] Phase 3 — Interactive Streamlit dashboard
-- [ ] Phase 4 — RAG pipeline with LangChain and FAISS
-- [ ] Phase 5 — Gemini LLM integration with citations
-- [ ] Phase 6 — Conversation memory
-- [ ] Phase 7 — Combined financial intelligence
-- [ ] Phase 9 — Polish and deploy to Hugging Face
+- [x] Phase 0 — Project setup, GitHub structure, Version 1 upload
+- [x] Phase 1 — PDF extraction pipeline, structured financial dataset
+- [x] Phase 2 — Financial engine with CAGR, ratios, health scoring
+- [x] Phase 3 — Interactive Streamlit dashboard with dark theme
+- [x] Phase 4 — RAG pipeline with LangChain, FAISS, HuggingFace embeddings
+- [x] Phase 5 — Groq LLM integration with structured citations
+- [x] Phase 6 — Financial Health Score across 4 dimensions
+- [ ] Phase 7 — Conversation memory across multi-turn queries
+- [ ] Phase 8 — Streamlit Community Cloud deployment
+- [ ] Phase 9 — README polish, architecture diagram, screenshots

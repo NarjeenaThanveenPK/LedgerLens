@@ -7,6 +7,7 @@ def parse_structured_response(raw_answer):
     raw_answer = re.sub(r'\[.*?\]', '', raw_answer)
     # Remove everything before the first section header
     raw_answer = re.sub(r'^.*?(SUMMARY:|KEY METRICS:|INSIGHT:)', r'\1', raw_answer, flags=re.DOTALL)
+    raw_answer = re.sub(r'`', '', raw_answer)
     
     sections = {
         "summary": "",

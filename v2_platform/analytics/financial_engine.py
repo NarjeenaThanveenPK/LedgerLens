@@ -1,6 +1,8 @@
+import os
 import pandas as pd
 
-DATA_PATH = "data/csv/financial_data_processed.csv"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_PATH = os.path.join(BASE_DIR, "data", "csv", "financial_data_processed.csv")
 
 def load_data():
     return pd.read_csv(DATA_PATH)

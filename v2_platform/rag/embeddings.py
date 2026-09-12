@@ -3,7 +3,8 @@ from langchain_community.vectorstores import FAISS
 from rag.document_loader import load_documents, split_documents
 import os
 
-VECTORSTORE_PATH = "vectorstore/faiss_index"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+VECTORSTORE_PATH = os.path.join(BASE_DIR, "vectorstore", "faiss_index")
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
 

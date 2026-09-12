@@ -2,7 +2,8 @@ from langchain_community.document_loaders import TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 import os
 
-PROCESSED_FOLDER = "data/processed"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROCESSED_FOLDER = os.path.join(BASE_DIR, "data", "processed")
 
 def load_documents():
     docs = []

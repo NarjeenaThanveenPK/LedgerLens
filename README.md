@@ -3,8 +3,7 @@
 > An AI-powered platform that analyzes SEC 10-K annual filings for Apple, Microsoft, and Tesla using Retrieval-Augmented Generation (RAG), financial analytics, and large language models.
 
 ## Live Demo
-
-🔗 [Coming Soon — Deploying to Streamlit Community Cloud]
+🔗 [LedgerLens — Financial Intelligence Platform](https://narjeenathanveenpk-ledgerlens-v2-platformdashboardapp-dtvhdb.streamlit.app)
 
 ## What it does
 

@@ -17,18 +17,23 @@
 ## Architecture
 
 ```text
-User Query
-    ↓
-Streamlit Interface
-    ↓
-Query Processing
-    ↓                    ↓
-Financial Engine         RAG Pipeline
-Pandas · Ratios          LangChain · FAISS
-    ↓                    ↓
-        Groq LLM
-           ↓
-Summary · Metrics · Charts · Sources
+            User Query
+                ↓
+        Streamlit Interface
+                ↓
+ ┌───────────────────────────────┐
+ │         Query Processing      │
+ └──────────┬────────────────────┘
+            ↓                ↓
+   Financial Engine      RAG Pipeline
+   Python · Pandas       LangChain · FAISS
+   Ratios · Scores       HuggingFace Embeddings
+            ↓                ↓
+           ┌──────────────────┐
+           │     Groq LLM     │
+           └────────┬─────────┘
+                    ↓
+    Summary · Metrics · Charts · Sources
 ```
 
 ## Tech Stack

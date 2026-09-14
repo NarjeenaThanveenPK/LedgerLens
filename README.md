@@ -1,6 +1,14 @@
 # LedgerLens — Financial Intelligence Platform
 
+
 > An AI-powered platform that analyzes SEC 10-K annual filings for Apple, Microsoft, and Tesla using Retrieval-Augmented Generation (RAG), financial analytics, and large language models.
+
+
+![Python](https://img.shields.io/badge/Python-3.11-blue)
+![LangChain](https://img.shields.io/badge/LangChain-RAG-green)
+![FAISS](https://img.shields.io/badge/FAISS-Vector%20DB-orange)
+![Streamlit](https://img.shields.io/badge/Streamlit-Deployed-red)
+![License](https://img.shields.io/badge/License-MIT-yellow)
 
 ## Live Demo
 🔗 [LedgerLens — Financial Intelligence Platform](https://narjeenathanveenpk-ledgerlens-v2-platformdashboardapp-dtvhdb.streamlit.app)

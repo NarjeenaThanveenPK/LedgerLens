@@ -12,6 +12,6 @@ BCG GenAI Job Simulation prototype. Keyword matching, Pandas analytics, predefin
 - [x] Phase 4 — RAG pipeline with LangChain, FAISS, HuggingFace embeddings
 - [x] Phase 5 — Groq LLM integration with structured citations
 - [x] Phase 6 — Financial Health Score across 4 dimensions
+- [x] Phase 8 — Streamlit Community Cloud deployment
 - [ ] Phase 7 — Conversation memory across multi-turn queries
-- [ ] Phase 8 — Streamlit Community Cloud deployment
-- [ ] Phase 9 — README polish, architecture diagram, screenshots
+- [ ] Phase 9 — Architecture diagram, screenshots, README polish

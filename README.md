@@ -13,6 +13,23 @@
 ## Live Demo
 🔗 [LedgerLens — Financial Intelligence Platform](https://narjeenathanveenpk-ledgerlens-v2-platformdashboardapp-dtvhdb.streamlit.app)
 
+## Screenshots
+
+### Home
+![Home](screenshots/Home_Page.png)
+
+### AI Assistant
+![AI Assistant](screenshots/AI_Assistant.png)
+
+### Analytics Dashboard
+![Dashboard](screenshots/Analytics_Dashboard.png)
+
+### Company Comparison
+![Comparison](screenshots/Comparison.png)
+
+### Report Generator
+![Reports](screenshots/Report_Generator.png)
+
 ## What it does
 
 - Ask natural language questions about company financials in plain English
